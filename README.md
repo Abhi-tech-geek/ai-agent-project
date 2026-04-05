@@ -90,3 +90,23 @@ Suggests:
 ---
 
 ## 📁 Project Structure
+ai-agent-project/
+
+├── app.py # Streamlit UI
+├── multi_agent.py # AI logic (agents + flow)
+├── tools.py # Tool implementations
+├── user_profile.json # User data
+├── requirements.txt # Dependencies
+├── .env # API keys (ignored)
+
+## ⚙️ How It Works
+User enters a query
+System checks if a tool is needed
+If needed → tool executes
+If not → AI generates response
+For complex queries:
+Task planning 🧠
+Research 🔍
+Final structured answer is shown
+
+
