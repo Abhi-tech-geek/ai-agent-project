@@ -1,24 +1,31 @@
 {
-    "name": "",
-    "role": "",
-    "goal": "",
+    "name": "Abhinav",
+    "role": "QA Tester / Developer",
+    "goal": "Become AI/ML Expert",
     "skills": [
+        "automation",
         "ai",
+        "testing",
         "python"
     ],
     "interests": [
-        "AI"
+        "AI",
+        "Testing",
+        "Web Development"
     ],
     "history": [
-        "how to improve English",
-        "latest tech trends",
-        "Python roadmap",
-        "5 * 23",
-        "Career guidance",
-        "weather in Delhi",
-        "should I switch job",
-        "Python roadmap",
-        "What is AI",
-        "What is AI"
-    ]
+        "Calculate 245 * 18 + 320",
+        "Calculate 245 * 18 + 320",
+        "5",
+        "5+5",
+        "what is car",
+        "what is car"
+    ],
+    "todos": [],
+    "stats": {
+        "total_messages": 6,
+        "tools_used": 3,
+        "streak_days": 1,
+        "last_active": "2026-04-25"
+    }
 }

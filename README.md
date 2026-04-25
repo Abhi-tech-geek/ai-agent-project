@@ -1,112 +1,101 @@
-# 🤖 AbhiNova AI
+# 🤖 AbhiNova AI — Personal Intelligence System
 
-AbhiNova AI is a smart personal AI assistant built using a multi-agent architecture.  
-It helps users learn, solve problems, and automate tasks using a combination of AI and tools.
-
----
-
-## 🚀 Description
-
-AbhiNova AI is designed to go beyond a basic chatbot.  
-It can intelligently decide:
-
-- Whether to answer directly 🤖  
-- Or use a tool (calculator, weather, email, etc.) 🔧  
-- Or combine both for better results  
-
-It also learns from user behavior to provide smarter recommendations over time.
+> A premium Jarvis-like AI personal assistant powered by multi-agent architecture and Groq LLM.
 
 ---
 
 ## ✨ Features
 
 ### 🧠 Multi-Agent System
-- Research Agent → gathers information  
-- Decision Agent → generates final answer  
-- Tool Handler → executes tools  
+- **Research Agent** — Deep information gathering
+- **Decision Agent** — Polished final response generation
+- **Task Planner** — Step-by-step actionable plans
+- **Tool Router** — Intelligent tool selection & execution
+
+### 🔧 AI-Powered Tools (12+)
+| Tool | Description |
+|------|-------------|
+| 🧮 Calculator | Safe math expression evaluation |
+| 🌤️ Weather | Live weather with detailed metrics |
+| 📧 Email Writer | AI-crafted professional emails |
+| 💻 Code Generator | Production-ready code generation |
+| 🧪 Test Cases | Comprehensive QA test case generation |
+| 🤔 Decision Maker | Pros/cons analysis with recommendations |
+| 🌐 Web Search | DuckDuckGo-powered internet search |
+| 📄 URL Reader | Read and extract content from any URL |
+| 🎨 Image Creator | AI image generation via Pollinations |
+| 📝 Summarizer | Intelligent text/article summarization |
+| 🌍 Translator | Multi-language translation |
+| 📋 Todo Manager | Personal task tracking system |
+| 😂 Motivation | Jokes and motivational quotes |
+
+### 🎯 Smart Features
+- **Auto-learning** — Detects your skills & interests from conversations
+- **Smart Recommendations** — Personalized learning/career suggestions
+- **Usage Stats** — Track messages, tools used, and streak days
+- **Chat Export** — Download conversations as markdown
+- **Profile System** — Editable user profile with skill badges
+
+### 🎨 Premium UI/UX
+- Jarvis-inspired dark theme with glassmorphism
+- Animated AI orb with pulse effect
+- Time-based greeting system
+- Quick action cards grid
+- Smooth message animations
+- Responsive sidebar with stats dashboard
 
 ---
 
-### 🔧 Smart Tool Integration
+## 🛠️ Tech Stack
 
-Available tools:
-
-- 🧮 Calculator → solves math problems  
-- 🌤 Weather → fetches live weather  
-- 📧 Email Writer → creates professional emails  
-- 💻 Code Generator → generates code  
-- 🧪 Test Case Generator → testing scenarios  
-- 🌐 Web Search → latest information  
-
----
-
-### ⚡ Hybrid Intelligence (AI + Tools)
-
-- Tools → fast & accurate  
-- AI → smart & well-formatted  
-
-👉 Combined output = better results
-
----
-
-### 👤 User Learning System
-
-Tracks:
-- Skills  
-- Interests  
-- History  
-
-👉 Enables personalized experience
-
----
-
-### 🎯 Recommendation Engine
-
-Suggests:
-- Learning paths  
-- Skills to improve  
-- Career direction  
-
----
-
-### 🖥️ Clean UI
-
-- Chat-based interface  
-- Suggestion buttons  
-- Tool result formatting  
-- Sidebar profile  
-
----
-
-## 🧰 Tech Stack
-
-- Python  
-- Streamlit  
-- Groq API (LLM - LLaMA models)  
-- DuckDuckGo Search  
-- Requests  
-- dotenv  
+- **Python** + **Streamlit**
+- **Groq API** (LLaMA 3.3 70B)
+- **DuckDuckGo Search**
+- **Pollinations AI** (Image Generation)
 
 ---
 
 ## 📁 Project Structure
+```
 ai-agent-project/
+├── app.py              # Streamlit UI (Jarvis theme)
+├── multi_agent.py      # Multi-agent orchestrator
+├── tools.py            # AI-powered tool implementations
+├── user_profile.json   # User data & preferences
+├── logo.png            # AbhiNova AI logo
+├── requirements.txt    # Dependencies
+└── .env                # API keys (gitignored)
+```
 
-├── app.py # Streamlit UI
-├── multi_agent.py # AI logic (agents + flow)
-├── tools.py # Tool implementations
-├── user_profile.json # User data
-├── requirements.txt # Dependencies
-├── .env # API keys (ignored)
+---
 
-## ⚙️ How It Works
-User enters a query
-System checks if a tool is needed
-If needed → tool executes
-If not → AI generates response
-For complex queries:
-Task planning 🧠
-Research 🔍
-Final structured answer is shown
+## ⚙️ Setup
 
+```bash
+# Clone the repository
+git clone https://github.com/your-username/ai-agent-project.git
+cd ai-agent-project
 
+# Install dependencies
+pip install -r requirements.txt
+
+# Add your API keys to .env
+echo "GROQ_API_KEY=your_key_here" > .env
+
+# Run the app
+streamlit run app.py
+```
+
+---
+
+## 🚀 How It Works
+1. User enters a query
+2. Tool Router checks if a specialized tool is needed
+3. If tool found → executes and returns formatted result
+4. If not → Research Agent gathers information
+5. Decision Agent combines everything into a polished response
+6. Skills, interests, and stats are tracked automatically
+
+---
+
+Built with ❤️ by **Abhinav**
