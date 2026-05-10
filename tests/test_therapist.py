@@ -665,3 +665,15 @@ def test_add_mood_log(tmp_path, monkeypatch):
     assert len(user.get("mood_logs", [])) == 1
     assert user["mood_logs"][0]["tags"] == ["anxious"]
 
+def test_get_dashboard_stats(tmp_path, monkeypatch):
+    monkeypatch.setattr(t, "PROFILES_DIR", str(tmp_path / "profiles"))
+    if not os.path.exists(t.PROFILES_DIR): os.makedirs(t.PROFILES_DIR)
+    username = "testuser"
+    t.clear_all_data(username)
+    t.add_mood_log(username, "2024-01-10", "10:00", 6, [], 3, "ok")
+    t.add_mood_log(username, "2024-01-11", "10:00", 8, [], 4, "good")
+    
+    stats = t.get_dashboard_stats(username)
+    assert stats["avg_mood"] == 7.0
+    assert stats["good_days"] == 2
+

@@ -581,3 +581,21 @@ def add_mood_log(username, date_str, time_str, morning_score, tags, sleep_qualit
         
     save_user(username, user)
     return log
+
+def get_dashboard_stats(username):
+    user = load_user(username)
+    logs = user.get("mood_logs", [])
+    
+    if not logs:
+        return {"avg_mood": 0, "good_days": 0, "total_sessions": 0, "logs": []}
+        
+    scores = [l["morningScore"] for l in logs if l.get("morningScore")]
+    avg_mood = sum(scores) / len(scores) if scores else 0
+    good_days = sum(1 for s in scores if s >= 6)
+    
+    return {
+        "avg_mood": round(avg_mood, 1),
+        "good_days": good_days,
+        "total_sessions": user.get("stats", {}).get("total_messages", 0),
+        "logs": logs
+    }
