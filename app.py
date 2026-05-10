@@ -10,8 +10,12 @@ from therapist import (
     load_user, save_user, patch_profile, update_concerns, update_stats,
     commit_session_summary, clear_all_data, toggle_memory_pause,
     authenticate, signup, ONBOARDING_STEPS, get_onboarding_response,
-    HELPLINES, MOOD_COLORS, MOOD_EMOJI, PERSONAS, add_mood_log
+    HELPLINES, MOOD_COLORS, MOOD_EMOJI, PERSONAS, add_mood_log,
+    get_dashboard_stats
 )
+import plotly.express as px
+import plotly.graph_objects as go
+import pandas as pd
 
 # ═══════════════════════════════════════
 # CONFIG
@@ -668,6 +672,19 @@ with s2:
 
 st.sidebar.markdown('<hr class="divider">', unsafe_allow_html=True)
 
+if "current_view" not in st.session_state:
+    st.session_state.current_view = "chat"
+
+st.sidebar.markdown("#### 📊 Views")
+if st.sidebar.button("💬 Chat", use_container_width=True):
+    st.session_state.current_view = "chat"
+    st.rerun()
+if st.sidebar.button("📊 Dashboard", use_container_width=True):
+    st.session_state.current_view = "dashboard"
+    st.rerun()
+
+st.sidebar.markdown('<hr class="divider">', unsafe_allow_html=True)
+
 # ── Chat Management ──
 st.sidebar.markdown("#### 💬 Conversations")
 
@@ -841,6 +858,49 @@ with h2:
 st.markdown('<hr class="divider">', unsafe_allow_html=True)
 
 
+def render_dashboard(username):
+    st.markdown('<p class="jarvis-title">📊 Progress Dashboard</p>', unsafe_allow_html=True)
+    st.markdown('<hr class="divider">', unsafe_allow_html=True)
+    
+    stats = get_dashboard_stats(username)
+    user_data = load_user(username)
+    streak = user_data.get("stats", {}).get("streak_days", 0)
+    
+    # 1. Header Stats
+    c1, c2, c3, c4 = st.columns(4)
+    with c1: st.metric("Check-in Streak", f"{streak} days")
+    with c2: st.metric("Avg Mood", f"{stats['avg_mood']} / 10")
+    with c3: st.metric("Good Days", f"{stats['good_days']}")
+    with c4: st.metric("Messages", stats['total_sessions'])
+    
+    logs = stats["logs"]
+    if not logs:
+        st.info("No mood data yet. Check in daily to see your progress!")
+        return
+        
+    df = pd.DataFrame(logs)
+    df['date'] = pd.to_datetime(df['date'])
+    
+    # 2. Mood Line Chart
+    st.markdown("### Mood Over Time")
+    fig = px.line(df, x='date', y='morningScore', markers=True, title="Daily Mood")
+    fig.add_hline(y=5, line_dash="dash", line_color="rgba(255,255,255,0.2)")
+    fig.update_traces(line_shape='spline', line=dict(color='#38bdf8', width=3))
+    fig.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color='#e2e8f0')
+    st.plotly_chart(fig, use_container_width=True)
+    
+    # 3. Sleep vs Mood Scatter
+    if 'sleepQuality' in df.columns:
+        st.markdown("### Sleep vs Mood Correlation")
+        fig_scatter = px.scatter(df, x='sleepQuality', y='morningScore', trendline="ols")
+        fig_scatter.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color='#e2e8f0')
+        st.plotly_chart(fig_scatter, use_container_width=True)
+
+if st.session_state.get("current_view", "chat") == "dashboard":
+    render_dashboard(username)
+    st.stop()
+
+
 # ═══════════════════════════════════════
 # HOME SCREEN (when chat is empty)
 # ═══════════════════════════════════════
@@ -1009,41 +1069,6 @@ if not user.get("onboarding_complete") and len(chat_history) == 0:
         st.markdown(f"""
         <div class="glass-card home-animated" style="margin-top:20px;">
             <p style="font-size:1.1rem; line-height:1.6;">{msg}</p>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        if "options" in onboard_data:
-            # Display options as buttons
-            cols = st.columns(len(onboard_data["options"]))
-            for i, opt in enumerate(onboard_data["options"]):
-                with cols[i % len(cols)]:
-                    if st.button(opt, key=f"onb_{step}_{i}", use_container_width=True):
-                        get_onboarding_response(username, step, opt)
-                        st.rerun()
-        st.stop()
-
-
-# ═══════════════════════════════════════
-# CHAT INPUT (with prefill from mood buttons)
-# ═══════════════════════════════════════
-prefill = st.session_state.pop("prefill_input", "")
-if prefill:
-    with st.container():
-        edited = st.text_area("✍️ Edit and send:", value=prefill, key="prefill_edit", height=80)
-        col_send, col_cancel = st.columns([1, 1])
-        with col_send:
-            if st.button("Send", use_container_width=True, key="prefill_send"):
-                if edited.strip():
-                    chat_history.append({"role": "user", "content": edited.strip()})
-                    st.rerun()
-        with col_cancel:
-            if st.button("Cancel", use_container_width=True, key="prefill_cancel"):
-                st.rerun()
-else:
-    user_input = st.chat_input("Ask AbhiNova anything...")
-    if user_input:
-        chat_history.append({"role": "user", "content": user_input})
-        st.rerun()
         </div>
         """, unsafe_allow_html=True)
         
