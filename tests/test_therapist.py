@@ -3,33 +3,45 @@ from therapist import parse_mood, VALID_MOODS
 
 
 def test_parse_mood_extracts_tag_and_strips():
-    mood, body = parse_mood("<mood>sad</mood>\nHey, sun ke dukh hua.")
+    mood, body, score = parse_mood("<mood>sad</mood>\nHey, sun ke dukh hua.")
     assert mood == "sad"
     assert body == "Hey, sun ke dukh hua."
 
 
 def test_parse_mood_invalid_falls_back_to_neutral():
-    mood, body = parse_mood("<mood>furious</mood>\nblah")
+    mood, body, score = parse_mood("<mood>furious</mood>\nblah")
     assert mood == "neutral"
     assert body == "blah"
 
 
 def test_parse_mood_missing_tag_returns_neutral_and_full_text():
-    mood, body = parse_mood("plain reply, no tag here")
+    mood, body, score = parse_mood("plain reply, no tag here")
     assert mood == "neutral"
     assert body == "plain reply, no tag here"
 
 
 def test_parse_mood_handles_uppercase_tag():
-    mood, body = parse_mood("<MOOD>SAD</MOOD>\nhi")
+    mood, body, score = parse_mood("<MOOD>SAD</MOOD>\nhi")
     assert mood == "sad"
     assert body == "hi"
 
 
 def test_parse_mood_handles_extra_whitespace():
-    mood, body = parse_mood("  <mood>  anxious  </mood>  \n\nbody text")
+    mood, body, score = parse_mood("  <mood>  anxious  </mood>  \n\nbody text")
     assert mood == "anxious"
     assert body.strip() == "body text"
+
+def test_parse_mood_with_score():
+    raw_text = "<mood>happy</mood>\nI am here to help. [SCORE: 8]"
+    mood, body, score = parse_mood(raw_text)
+    assert body.strip() == "I am here to help."
+    assert mood == "happy"
+    assert score == 8
+
+    # Default fallback
+    raw_text_no_score = "I am here. <mood>neutral</mood>"
+    mood, body, score = parse_mood(raw_text_no_score)
+    assert score == 5
 
 
 def test_valid_moods_set_has_eight_entries():

@@ -13,21 +13,35 @@ VALID_MOODS = {"sad", "anxious", "angry", "happy", "lonely", "confused", "calm",
 _MOOD_TAG_RE = re.compile(r'^\s*<mood>\s*(\w+)\s*</mood>\s*\n?', re.IGNORECASE)
 
 
-def parse_mood(reply: str) -> tuple[str, str]:
-    """Extract <mood>X</mood> from first line of reply.
+def parse_mood(reply: str) -> tuple[str, str, int]:
+    """Extract <mood>X</mood> from first line of reply and [SCORE: X] anywhere.
 
-    Returns (mood, stripped_reply). Falls back to ('neutral', original_reply)
-    if no tag found or mood is not in VALID_MOODS.
+    Returns (mood, stripped_reply, score). Falls back to ('neutral', original_reply, 5)
+    if tags are not found.
     """
     if not reply:
-        return "neutral", reply or ""
+        return "neutral", reply or "", 5
+        
+    score_match = re.search(r"\[SCORE:\s*(\d+)\]", reply)
+    score = 5
+    if score_match:
+        try:
+            score = int(score_match.group(1))
+        except ValueError:
+            pass
+            
+    # Remove score tag from reply
+    reply = re.sub(r"\[SCORE:\s*\d+\]", "", reply).strip()
+        
     m = _MOOD_TAG_RE.match(reply)
     if not m:
-        return "neutral", reply
+        return "neutral", reply, score
+        
     mood = m.group(1).lower()
     if mood not in VALID_MOODS:
-        return "neutral", _MOOD_TAG_RE.sub("", reply, count=1)
-    return mood, _MOOD_TAG_RE.sub("", reply, count=1)
+        return "neutral", _MOOD_TAG_RE.sub("", reply, count=1), score
+        
+    return mood, _MOOD_TAG_RE.sub("", reply, count=1), score
 
 
 # ─── Crisis detection ────────────────────────────────────
@@ -345,6 +359,7 @@ OUTPUT FORMAT (STRICT):
 - This tag is parsed and stripped from display. Choose the user's CURRENT mood
   (what they're feeling right now), not yours.
 - After the tag, a blank line, then your warm reply.
+- You MUST also append a [SCORE: X] tag anywhere in your reply, where X is an integer 1-10 assessing the user's current mood based on their last message (1=very distressed/in crisis, 5=neutral, 10=excellent).
 """
     return base_prompt
 
@@ -411,9 +426,8 @@ def therapist_agent(username: str, user_input: str, chat_history: list[dict],
         full += delta
         yield {"chunk": delta, "done": False}
 
-    mood, reply = parse_mood(full)
-    yield {"chunk": "", "done": True, "reply": reply, "mood": mood, "crisis": in_crisis}
-
+    mood, reply, score = parse_mood(full)
+    yield {"chunk": "", "done": True, "reply": reply, "mood": mood, "score": score, "crisis": in_crisis}
 
 # ─── Onboarding logic ──────────────────────────────────
 ONBOARDING_STEPS = {
