@@ -11,7 +11,7 @@ from therapist import (
     commit_session_summary, clear_all_data, toggle_memory_pause,
     authenticate, signup, ONBOARDING_STEPS, get_onboarding_response,
     HELPLINES, MOOD_COLORS, MOOD_EMOJI, PERSONAS, add_mood_log,
-    get_dashboard_stats
+    get_dashboard_stats, check_achievements
 )
 import plotly.express as px
 import plotly.graph_objects as go
@@ -597,6 +597,54 @@ if not st.session_state.logged_in:
     st.stop()
 
 username = st.session_state.username
+
+@st.dialog("Daily Check-in")
+def mood_checkin_dialog():
+    st.write("How are you feeling today?")
+    score = st.slider("Mood Score", 1, 10, 5, format="Score: %d")
+    
+    tags = st.multiselect(
+        "Emotions",
+        ["Anxious", "Tired", "Frustrated", "Numb", "Confused", "Motivated", "Content", "Sad"]
+    )
+    
+    sleep = st.radio("Sleep Quality", [1, 2, 3, 4, 5], index=2, horizontal=True)
+    word = st.text_input("One word for today:")
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("Skip for now", use_container_width=True):
+            st.session_state["mood_checked_today"] = True
+            st.rerun()
+    with col2:
+        if st.button("Log Mood", type="primary", use_container_width=True):
+            add_mood_log(
+                st.session_state.username,
+                date_str=datetime.now().strftime("%Y-%m-%d"),
+                time_str=datetime.now().strftime("%H:%M"),
+                morning_score=score,
+                tags=tags,
+                sleep_quality=sleep,
+                one_word=word
+            )
+            new_achievements = check_achievements(st.session_state.username)
+            for ach in new_achievements:
+                st.toast(f"Achievement Unlocked: {ach} 🏆", icon="🌟")
+            st.session_state["mood_checked_today"] = True
+            st.toast("Mood logged successfully!", icon="✅")
+            st.rerun()
+
+if "mood_checked_today" not in st.session_state:
+    st.session_state["mood_checked_today"] = False
+
+today_str = datetime.now().strftime("%Y-%m-%d")
+user_data = load_user(username)
+logs = user_data.get("mood_logs", [])
+has_log_today = any(l.get("date") == today_str for l in logs)
+
+if not has_log_today and not st.session_state["mood_checked_today"]:
+    mood_checkin_dialog()
+
 
 # ═══════════════════════════════════════
 # HELPERS

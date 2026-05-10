@@ -599,3 +599,30 @@ def get_dashboard_stats(username):
         "total_sessions": user.get("stats", {}).get("total_messages", 0),
         "logs": logs
     }
+
+def check_achievements(username):
+    user = load_user(username)
+    logs = user.get("mood_logs", [])
+    achievements = user.get("achievements", [])
+    new_unlocks = []
+    
+    def unlock(ach_id):
+        if ach_id not in achievements:
+            achievements.append(ach_id)
+            new_unlocks.append(ach_id)
+            
+    if len(logs) >= 1:
+        unlock("First Step")
+        
+    streak = user.get("stats", {}).get("streak_days", 0)
+    if streak >= 7:
+        unlock("7 Days")
+        
+    if streak >= 30:
+        unlock("One Month")
+        
+    if new_unlocks:
+        user["achievements"] = achievements
+        save_user(username, user)
+        
+    return new_unlocks
