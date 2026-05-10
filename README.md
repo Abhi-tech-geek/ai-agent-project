@@ -1,100 +1,76 @@
-# 🤖 AbhiNova AI — Personal Intelligence System
+# 🤖 AbhiNova AI — Empathetic AI Therapist
 
-> A premium Jarvis-like AI personal assistant powered by multi-agent architecture and Groq LLM.
+> A premium, Jarvis-inspired AI Personal Therapist designed for emotional well-being. Built with high-performance LLaMA 3.3 70B (via Groq) and a futurist glassmorphism UI.
 
 ---
 
 ## ✨ Features
 
-### 🧠 Multi-Agent System
-- **Research Agent** — Deep information gathering
-- **Decision Agent** — Polished final response generation
-- **Task Planner** — Step-by-step actionable plans
-- **Tool Router** — Intelligent tool selection & execution
+### 🧠 Empathetic AI Core
+*   **Persona Engine** — Switch between specialized therapist modes: *The Friend, The Sage, The Coach, and The Logical One*.
+*   **Intelligent Auto-Learning** — Organically identifies underlying life concerns (Work, Anxiety, Relationships, Sleep) from context.
+*   **CBT Thought Journal** — A 4-step guided Cognitive Behavioral Therapy framework to identify and reframe cognitive distortions.
+*   **Session Synthesis** — Automatic summarization of long chats with theme extraction and "Mood Arc" tracking.
+*   **Safety First** — Deterministic real-time crisis detection with immediate access to 24/7 helplines.
 
-### 🔧 AI-Powered Tools (12+)
-| Tool | Description |
-|------|-------------|
-| 🧮 Calculator | Safe math expression evaluation |
-| 🌤️ Weather | Live weather with detailed metrics |
-| 📧 Email Writer | AI-crafted professional emails |
-| 💻 Code Generator | Production-ready code generation |
-| 🧪 Test Cases | Comprehensive QA test case generation |
-| 🤔 Decision Maker | Pros/cons analysis with recommendations |
-| 🌐 Web Search | DuckDuckGo-powered internet search |
-| 📄 URL Reader | Read and extract content from any URL |
-| 🎨 Image Creator | AI image generation via Pollinations |
-| 📝 Summarizer | Intelligent text/article summarization |
-| 🌍 Translator | Multi-language translation |
-| 📋 Todo Manager | Personal task tracking system |
-| 😂 Motivation | Jokes and motivational quotes |
+### 🎯 Proactive Features
+*   **Daily Mood Matrix** — Log mood scores, emotional tags, and sleep quality to track trends.
+*   **Music & Sound Therapy** — Dynamic ambient soundscapes and Spotify suggestions tailored to your real-time emotional state.
+*   **Futurist Voice Mode** — Full duplex voice interaction with custom speaking speeds and multi-language recognition (Hindi/English).
+*   **Progress Analytics** — Rich Plotly-powered dashboards visualizing correlations between sleep, mood, and journaling patterns.
 
-### 🎯 Smart Features
-- **Auto-learning** — Detects your skills & interests from conversations
-- **Smart Recommendations** — Personalized learning/career suggestions
-- **Usage Stats** — Track messages, tools used, and streak days
-- **Chat Export** — Download conversations as markdown
-- **Profile System** — Editable user profile with skill badges
-
-### 🎨 Premium UI/UX
-- Jarvis-inspired dark theme with glassmorphism
-- Animated AI orb with pulse effect
-- Time-based greeting system
-- Quick action cards grid
-- Smooth message animations
-- Responsive sidebar with stats dashboard
+### 🎨 Premium UI/UX (Jarvis Aesthetic)
+*   **Dynamic AI Orb** — A pulsing, color-shifting orb that reacts to the AI's "mood" and thinking state.
+*   **Glassmorphism Theme** — Deep blue frosted glass UI with smooth micro-animations and glowing transitions.
+*   **Ambient Halo** — A subtle screen-wide glow that changes color based on the conversation's emotional tone.
 
 ---
 
-## 🛠️ Tech Stack
+## 🛠️ Technical Architecture
 
-- **Python** + **Streamlit**
-- **Groq API** (LLaMA 3.3 70B)
-- **DuckDuckGo Search**
-- **Pollinations AI** (Image Generation)
+### 🛡️ Security & Reliability
+*   **Salted Hashing** — Passwords secured using `PBKDF2-HMAC-SHA256` with unique 16-byte salts and 100,000 iterations.
+*   **Concurrency Engine** — Robust file-level locking via `filelock` to prevent data corruption during multi-user sessions.
+*   **Local-First Privacy** — All chat history, journals, and personal profiles are stored locally in the `profiles/` directory.
+
+### 📦 Tech Stack
+*   **Backend:** Python 3.14+, Streamlit
+*   **LLM Intelligence:** Groq (LLaMA 3.3 70B)
+*   **Visualization:** Plotly & Pandas
+*   **Database:** Local JSON with Atomic File Locking
 
 ---
 
 ## 📁 Project Structure
-```
+```text
 ai-agent-project/
-├── app.py              # Streamlit UI (Jarvis theme)
-├── multi_agent.py      # Multi-agent orchestrator
-├── tools.py            # AI-powered tool implementations
-├── user_profile.json   # User data & preferences
-├── logo.png            # AbhiNova AI logo
-├── requirements.txt    # Dependencies
-└── .env                # API keys (gitignored)
+├── app.py              # Main Streamlit Application (UI & Orchestration)
+├── therapist.py        # Core Business Logic, CBT Engine, & Prompt Engineering
+├── components/         # Custom React components (Voice & Music Player)
+├── profiles/           # Encrypted-at-rest (Hashed) local user profiles
+├── tests/              # Comprehensive Pytest suite (85+ cases)
+├── users.json          # Authenticated User Registry
+└── requirements.txt    # Project Dependencies
 ```
 
 ---
 
-## ⚙️ Setup
+## ⚙️ Quick Start
 
 ```bash
-# Clone the repository
+# 1. Clone & Navigate
 git clone https://github.com/your-username/ai-agent-project.git
 cd ai-agent-project
 
-# Install dependencies
+# 2. Environment Setup
 pip install -r requirements.txt
 
-# Add your API keys to .env
+# 3. Configure API Keys
 echo "GROQ_API_KEY=your_key_here" > .env
 
-# Run the app
+# 4. Launch Experience
 streamlit run app.py
 ```
-
----
-
-## 🚀 How It Works
-1. User enters a query
-2. Tool Router checks if a specialized tool is needed
-3. If tool found → executes and returns formatted result
-4. If not → Research Agent gathers information
-5. Decision Agent combines everything into a polished response
-6. Skills, interests, and stats are tracked automatically
 
 ---
 

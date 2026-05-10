@@ -1,0 +1,21 @@
+# Therapist AI Upgrade - TODO
+
+- [x] Phase 1: File Migration & Cleanup
+    - [x] Copy `therapist.py` from worktree to root
+    - [x] Copy `app.py` from worktree to root
+    - [x] Verify basic app runs
+- [x] Phase 2: Authentication System
+    - [x] Implement Login/Signup UI in `app.py`
+    - [x] Implement User Data storage in `user_profile.json` (actually `profiles/` and `users.json`)
+- [x] Phase 3: Conversational Onboarding
+    - [x] Implement Onboarding logic in `therapist.py`
+    - [x] Implement UI for onboarding messages and buttons in `app.py`
+- [x] Phase 4: Therapist Persona Engine
+    - [x] Update System Prompt in `therapist.py` with the 4 personas
+    - [x] Add Persona Selection UI to `app.py`
+- [x] Phase 5: Multi-Language & Crisis Detection
+    - [x] Update language detection rules in `therapist.py`
+    - [x] Verify crisis detection is robust
+- [ ] Phase 6: Verification & Final Polish
+    - [ ] Test all flows
+    - [ ] Final UI/UX tweaks (typing speed, etc.)

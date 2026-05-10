@@ -119,6 +119,13 @@ def test_concern_multiple_can_match_same_message():
     assert "loneliness" in cs
 
 
+def test_should_offer_session_summary_for_closing_phrases():
+    assert t.should_offer_session_summary("bye")
+    assert t.should_offer_session_summary("end session")
+    assert t.should_offer_session_summary("that's all")
+    assert not t.should_offer_session_summary("thanks for explaining, I have one more thing")
+
+
 def test_all_concern_keys_have_compiled_pattern():
     expected_keys = {"work_stress","anxiety","relationship","sleep",
                      "loneliness","grief","self_esteem"}
@@ -422,73 +429,85 @@ def test_therapist_agent_caps_history_at_ten(monkeypatch):
 
 
 # ─── session_summary + commit_session_summary ───────────
-def test_session_summary_returns_date_summary_themes_arc(monkeypatch):
-    monkeypatch.setenv("GROQ_API_KEY", "fake")
+def _fake_claude(summary_text):
+    """Builds a Groq / OpenAI-shaped fake client (summarizer switched from Anthropic
+    to Groq; helper name kept for backward compat with existing tests)."""
     fake_client = MagicMock()
     fake_resp = MagicMock()
-    fake_resp.choices = [MagicMock(message=MagicMock(content=_json.dumps({
-        "summary": "user vented about work",
-        "mood_arc": ["anxious", "calm"],
-        "themes": ["work_stress"],
-    })))]
+    fake_resp.choices = [MagicMock(message=MagicMock(content=summary_text))]
     fake_client.chat.completions.create.return_value = fake_resp
-    history = [{"role": "user", "content": "work too much"},
-               {"role": "assistant", "content": "<mood>anxious</mood>\nsamajh"}]
-    with patch("therapist.get_client", return_value=fake_client):
-        s = t.session_summary(history)
-    assert s["summary"] == "user vented about work"
-    assert s["mood_arc"] == ["anxious", "calm"]
-    assert s["themes"] == ["work_stress"]
+    return fake_client
+
+
+def test_session_summary_returns_phase3_record(monkeypatch, tmp_path):
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "fake")
+    monkeypatch.setattr(t, "PROFILES_DIR", str(tmp_path / "profiles"))
+    if not os.path.exists(t.PROFILES_DIR): os.makedirs(t.PROFILES_DIR)
+    p = t._default_profile("Abhinav")
+    p["persona"] = "sage"
+    t.save_user("test_user", p)
+    history = [
+        {"role": "user", "content": "work too much"},
+        {"role": "assistant", "content": "samajh", "score": 3},
+        {"role": "user", "content": "I feel a little calmer"},
+        {"role": "assistant", "content": "small step", "score": 6},
+    ]
+    fake_client = _fake_claude("📋 Today's Session\n\nYou talked about work pressure.")
+    with patch("therapist.get_claude_client", return_value=fake_client):
+        s = t.session_summary(history, username="test_user", duration_minutes=23)
+    assert s["summary"].startswith("📋 Today's Session")
+    assert s["moodStart"] == 3
+    assert s["moodEnd"] == 6
+    assert s["topics"] == ["work"]
+    assert s["persona"] == "sage"
+    assert s["durationMinutes"] == 23
+    assert s["messageCount"] == 4
     assert s["date"] == date.today().isoformat()
 
 
-def test_session_summary_filters_invalid_moods_and_themes(monkeypatch):
+def test_session_summary_caps_to_150_words(monkeypatch):
     monkeypatch.setenv("GROQ_API_KEY", "fake")
-    fake_client = MagicMock()
-    fake_resp = MagicMock()
-    fake_resp.choices = [MagicMock(message=MagicMock(content=_json.dumps({
-        "summary": "", "mood_arc": ["anxious", "ecstatic"], "themes": ["work_stress", "alien"],
-    })))]
-    fake_client.chat.completions.create.return_value = fake_resp
+    fake_client = _fake_claude(" ".join([f"w{i}" for i in range(180)]))
     with patch("therapist.get_client", return_value=fake_client):
         s = t.session_summary([{"role": "user", "content": "x"}])
-    assert s["mood_arc"] == ["anxious"]
-    assert s["themes"] == ["work_stress"]
+    assert len(s["summary"].split()) <= 150
+    assert s["summary"].endswith("...")
 
 
-def test_session_summary_handles_invalid_json(monkeypatch):
+def test_session_summary_uses_claude_prompt(monkeypatch):
+    """Summarizer now hits Groq via chat.completions; system goes as messages[0],
+    user prompt as messages[1] (OpenAI shape)."""
     monkeypatch.setenv("GROQ_API_KEY", "fake")
-    fake_client = MagicMock()
-    fake_resp = MagicMock()
-    fake_resp.choices = [MagicMock(message=MagicMock(content="not json"))]
-    fake_client.chat.completions.create.return_value = fake_resp
+    fake_client = _fake_claude("summary")
     with patch("therapist.get_client", return_value=fake_client):
-        s = t.session_summary([{"role": "user", "content": "x"}])
-    assert s["summary"] == ""
-    assert s["mood_arc"] == []
-    assert s["themes"] == []
+        t.session_summary([{"role": "user", "content": "sleep is hard"}])
+    kwargs = fake_client.chat.completions.create.call_args.kwargs
+    msgs = kwargs["messages"]
+    assert msgs[0]["role"] == "system"
+    assert "Today's Session" in msgs[0]["content"]
+    assert msgs[1]["role"] == "user"
+    assert "sleep is hard" in msgs[1]["content"]
 
 
-def test_commit_session_summary_appends_and_caps_at_20(tmp_path, monkeypatch):
+def test_commit_session_summary_appends_and_recomputes_themes(tmp_path, monkeypatch):
     monkeypatch.setenv("GROQ_API_KEY", "fake")
     monkeypatch.setattr(t, "PROFILES_DIR", str(tmp_path / "profiles"))
     if not os.path.exists(t.PROFILES_DIR): os.makedirs(t.PROFILES_DIR)
     p = t._default_profile()
-    p["session_summaries"] = [{"date": "2026-01-01", "summary": "old", "mood_arc": [], "themes": []}] * 20
+    p["session_summaries"] = [{"date": "2026-01-01", "summary": "old", "topics": ["sleep"]}]
     t.save_user("test_user", p)
 
-    fake_client = MagicMock()
-    fake_resp = MagicMock()
-    fake_resp.choices = [MagicMock(message=MagicMock(content=_json.dumps({
-        "summary": "new session", "mood_arc": ["calm"], "themes": ["sleep"],
-    })))]
-    fake_client.chat.completions.create.return_value = fake_resp
+    fake_client = _fake_claude("new session")
     with patch("therapist.get_client", return_value=fake_client):
-        t.commit_session_summary("test_user", 
-[{"role": "user", "content": "x"}, {"role": "assistant", "content": "y"},
-                                  {"role": "user", "content": "z"}, {"role": "assistant", "content": "w"}])
+        result = t.commit_session_summary(
+            "test_user",
+            [{"role": "user", "content": "sleep is bad"}, {"role": "assistant", "content": "y"},
+             {"role": "user", "content": "z"}, {"role": "assistant", "content": "w"}],
+            duration_minutes=12,
+        )
     p = t.load_user("test_user")
-    assert len(p["session_summaries"]) == 20
+    assert result["summary"] == "new session"
+    assert len(p["session_summaries"]) == 2
     assert p["session_summaries"][-1]["summary"] == "new session"
     assert "sleep" in p["recurring_themes"]
 
@@ -558,7 +577,7 @@ def test_signup_success_hashes_password_and_creates_profile(tmp_path, monkeypatc
     db = t.load_users_db()
     assert "newuser" in db
     assert db["newuser"]["password"] != "mypassword"
-    assert len(db["newuser"]["password"]) == 64  # SHA-256 length
+    assert len(db["newuser"]["password"]) == 97  # 32 (salt hex) + 1 (:) + 64 (hash hex)
     
     profile = t.load_user("newuser")
     assert profile["name"] == "New User"
@@ -672,8 +691,235 @@ def test_get_dashboard_stats(tmp_path, monkeypatch):
     t.clear_all_data(username)
     t.add_mood_log(username, "2024-01-10", "10:00", 6, [], 3, "ok")
     t.add_mood_log(username, "2024-01-11", "10:00", 8, [], 4, "good")
-    
+
     stats = t.get_dashboard_stats(username)
     assert stats["avg_mood"] == 7.0
     assert stats["good_days"] == 2
 
+
+# ════════════════════════════════════════════
+# Phase 4: Thought Journal (CBT)
+# ════════════════════════════════════════════
+
+def test_extract_json_strips_markdown_fences():
+    blob = "```json\n{\"a\": 1, \"b\": \"two\"}\n```"
+    assert t._extract_json(blob) == {"a": 1, "b": "two"}
+
+
+def test_extract_json_handles_single_quotes():
+    blob = "Here is the result: {'q1': 'one', 'q2': 'two'}"
+    out = t._extract_json(blob)
+    assert out == {"q1": "one", "q2": "two"}
+
+
+def test_extract_json_returns_empty_on_garbage():
+    assert t._extract_json("no json here") == {}
+    assert t._extract_json("") == {}
+
+
+def _fake_groq_json(payload_str):
+    fake_client = MagicMock()
+    fake_resp = MagicMock()
+    fake_resp.choices = [MagicMock(message=MagicMock(content=payload_str))]
+    fake_client.chat.completions.create.return_value = fake_resp
+    return fake_client
+
+
+def test_journal_generate_questions_parses_json(monkeypatch):
+    monkeypatch.setenv("GROQ_API_KEY", "fake")
+    fake_client = _fake_groq_json('{"q1": "What evidence?", "q2": "What would a friend say?"}')
+    with patch("therapist.get_client", return_value=fake_client):
+        out = t.journal_generate_questions("I am a failure", 8)
+    assert out["q1"] == "What evidence?"
+    assert out["q2"] == "What would a friend say?"
+
+
+def test_journal_generate_questions_falls_back_on_bad_json(monkeypatch):
+    monkeypatch.setenv("GROQ_API_KEY", "fake")
+    fake_client = _fake_groq_json("not valid json at all")
+    with patch("therapist.get_client", return_value=fake_client):
+        out = t.journal_generate_questions("I am a failure", 8)
+    assert out["q1"]  # non-empty
+    assert out["q2"]  # non-empty
+
+
+def test_journal_identify_distortion_normalizes_keys(monkeypatch):
+    monkeypatch.setenv("GROQ_API_KEY", "fake")
+    fake_client = _fake_groq_json(
+        '{"distortion": "All-Or-Nothing", "name": "All-or-Nothing Thinking", '
+        '"explanation": "Black-and-white view.", "in_their_words": "always vs never."}'
+    )
+    with patch("therapist.get_client", return_value=fake_client):
+        out = t.journal_identify_distortion("I always fail", ["a1", "a2"])
+    assert out["distortion"] == "all_or_nothing"
+    assert "All-or-Nothing" in out["name"]
+
+
+def test_journal_identify_distortion_unknown_key_falls_to_balanced(monkeypatch):
+    monkeypatch.setenv("GROQ_API_KEY", "fake")
+    fake_client = _fake_groq_json('{"distortion": "made_up_label"}')
+    with patch("therapist.get_client", return_value=fake_client):
+        out = t.journal_identify_distortion("balanced thought", ["a", "b"])
+    assert out["distortion"] == "balanced"
+    # provides a friendly default explanation
+    assert out["explanation"]
+
+
+def test_journal_generate_reframe_returns_text(monkeypatch):
+    monkeypatch.setenv("GROQ_API_KEY", "fake")
+    fake_client = _fake_groq_json(
+        '{"reframe": "I struggled today, and that does not erase me.", '
+        '"note": "naming the pain softens it."}'
+    )
+    with patch("therapist.get_client", return_value=fake_client):
+        out = t.journal_generate_reframe("I am useless", ["a", "b"], "all_or_nothing")
+    assert "struggled" in out["reframe"]
+    assert out["note"]
+
+
+def test_add_journal_entry_persists_and_clamps_to_200(tmp_path, monkeypatch):
+    monkeypatch.setattr(t, "PROFILES_DIR", str(tmp_path / "profiles"))
+    if not os.path.exists(t.PROFILES_DIR): os.makedirs(t.PROFILES_DIR)
+    t.save_user("u", t._default_profile())
+    saved = t.add_journal_entry("u", {
+        "originalThought": "I am tired",
+        "intensity": 7,
+        "q1": "q1?", "a1": "a1",
+        "q2": "q2?", "a2": "a2",
+        "distortion": "catastrophizing",
+        "distortionName": "Catastrophizing",
+        "reframe": "I am tired and that's allowed.",
+        "note": "rest is data.",
+    })
+    assert saved["id"]
+    assert saved["saved"] is True
+    user = t.load_user("u")
+    assert len(user["journal_entries"]) == 1
+    assert user["journal_entries"][0]["originalThought"] == "I am tired"
+
+
+def test_add_journal_entry_skipped_when_paused(tmp_path, monkeypatch):
+    monkeypatch.setattr(t, "PROFILES_DIR", str(tmp_path / "profiles"))
+    if not os.path.exists(t.PROFILES_DIR): os.makedirs(t.PROFILES_DIR)
+    p = t._default_profile()
+    p["memory_paused"] = True
+    t.save_user("u", p)
+    t.add_journal_entry("u", {"originalThought": "x", "intensity": 5})
+    assert t.load_user("u").get("journal_entries", []) == []
+
+
+def test_delete_journal_entry_removes_match(tmp_path, monkeypatch):
+    monkeypatch.setattr(t, "PROFILES_DIR", str(tmp_path / "profiles"))
+    if not os.path.exists(t.PROFILES_DIR): os.makedirs(t.PROFILES_DIR)
+    t.save_user("u", t._default_profile())
+    e1 = t.add_journal_entry("u", {"originalThought": "a", "intensity": 4})
+    t.add_journal_entry("u", {"originalThought": "b", "intensity": 6})
+    assert t.delete_journal_entry("u", e1["id"]) is True
+    remaining = t.get_journal_entries("u")
+    assert len(remaining) == 1
+    assert remaining[0]["originalThought"] == "b"
+
+
+def test_get_journal_stats_counts_recent_month(tmp_path, monkeypatch):
+    monkeypatch.setattr(t, "PROFILES_DIR", str(tmp_path / "profiles"))
+    if not os.path.exists(t.PROFILES_DIR): os.makedirs(t.PROFILES_DIR)
+    t.save_user("u", t._default_profile())
+    today = date.today().isoformat()
+    long_ago = (date.today() - timedelta(days=90)).isoformat()
+    t.add_journal_entry("u", {"originalThought": "a", "intensity": 8,
+                              "distortion": "catastrophizing",
+                              "distortionName": "Catastrophizing",
+                              "date": today})
+    t.add_journal_entry("u", {"originalThought": "b", "intensity": 4,
+                              "distortion": "catastrophizing",
+                              "distortionName": "Catastrophizing",
+                              "date": today})
+    t.add_journal_entry("u", {"originalThought": "c", "intensity": 9,
+                              "distortion": "mind_reading",
+                              "distortionName": "Mind Reading",
+                              "date": long_ago})
+    stats = t.get_journal_stats("u")
+    assert stats["entries_this_month"] == 2
+    assert stats["most_common_pattern"] == "Catastrophizing"
+    assert stats["avg_intensity"] == 7.0
+    assert stats["distortion_counts"].get("Catastrophizing") == 2
+
+
+# ════════════════════════════════════════════
+# Phase 4: Music Therapy
+# ════════════════════════════════════════════
+
+def test_mood_to_music_has_six_keys():
+    assert set(t.MOOD_TO_MUSIC.keys()) == {"sad", "anxious", "angry", "happy", "numb", "focus"}
+
+
+def test_music_for_mood_maps_lonely_to_sad():
+    assert t.music_for_mood("lonely")["ambient"] == t.MOOD_TO_MUSIC["sad"]["ambient"]
+
+
+def test_music_for_mood_unknown_falls_back_to_focus():
+    assert t.music_for_mood("zzz")["ambient"] == t.MOOD_TO_MUSIC["focus"]["ambient"]
+
+
+def test_consecutive_sad_messages_counts_recent_run():
+    history = [
+        {"role": "assistant", "mood": "happy"},
+        {"role": "user", "content": "down"},
+        {"role": "assistant", "mood": "sad"},
+        {"role": "user", "content": "still"},
+        {"role": "assistant", "mood": "lonely"},
+        {"role": "user", "content": "yeah"},
+        {"role": "assistant", "mood": "sad"},
+    ]
+    assert t.consecutive_sad_messages(history) == 3
+
+
+def test_consecutive_sad_messages_breaks_on_non_sad():
+    history = [
+        {"role": "assistant", "mood": "sad"},
+        {"role": "assistant", "mood": "calm"},
+        {"role": "assistant", "mood": "sad"},
+    ]
+    assert t.consecutive_sad_messages(history) == 1
+
+
+def test_add_music_feedback_appends(tmp_path, monkeypatch):
+    monkeypatch.setattr(t, "PROFILES_DIR", str(tmp_path / "profiles"))
+    if not os.path.exists(t.PROFILES_DIR): os.makedirs(t.PROFILES_DIR)
+    t.save_user("u", t._default_profile())
+    t.add_music_feedback("u", "anxious", "ocean_waves", "yes")
+    fb = t.load_user("u")["music_feedback"]
+    assert len(fb) == 1
+    assert fb[0]["moodKey"] == "anxious"
+    assert fb[0]["response"] == "yes"
+
+
+def test_clear_feature_data_journal_only(tmp_path, monkeypatch):
+    monkeypatch.setattr(t, "PROFILES_DIR", str(tmp_path / "profiles"))
+    if not os.path.exists(t.PROFILES_DIR): os.makedirs(t.PROFILES_DIR)
+    t.save_user("u", t._default_profile("Abhi"))
+    t.add_journal_entry("u", {"originalThought": "x", "intensity": 3})
+    t.add_music_feedback("u", "sad", "soft_rain", "little")
+    t.clear_feature_data("u", "journal")
+    user = t.load_user("u")
+    assert user["journal_entries"] == []
+    assert len(user["music_feedback"]) == 1
+    assert user["name"] == "Abhi"
+
+
+def test_export_user_data_returns_full_profile(tmp_path, monkeypatch):
+    monkeypatch.setattr(t, "PROFILES_DIR", str(tmp_path / "profiles"))
+    if not os.path.exists(t.PROFILES_DIR): os.makedirs(t.PROFILES_DIR)
+    t.save_user("u", t._default_profile("Abhi"))
+    data = t.export_user_data("u")
+    assert data["name"] == "Abhi"
+    assert "journal_entries" in data
+    assert "music_feedback" in data
+
+
+def test_default_profile_has_phase4_fields():
+    p = t._default_profile()
+    assert p["journal_entries"] == []
+    assert p["music_feedback"] == []
+    assert p["settings"]["journal_enabled"] is True
+    assert p["settings"]["music_enabled"] is True
